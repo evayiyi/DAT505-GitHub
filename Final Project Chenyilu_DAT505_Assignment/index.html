@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>webgl - interactive cubes</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src="./js/three.js"></script>
+		<script src="./js/OrbitControls.js"></script>
+
+		<audio style="position: absolute; top:20px" src="backgroundsound.wav" controls autoplay loop></audio>
+		<div id="container" style="width: 100%;height: 100%;">
+
+		</div>
+		<script>
+
+			var container;
+			var camera, scene,controls, raycaster, renderer;
+
+			var mouse = new THREE.Vector2(), INTERSECTED;
+
+			var radius = 500 * 1.5 ;
+
+			var frustumSize = 1000;
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.getElementById("container");
+				document.body.appendChild( container );
+
+				var aspect = window.innerWidth / window.innerHeight;
+
+				scene = new THREE.Scene();
+				// scene.background = new THREE.Color( 0xf0f0f0 );
+
+				scene.background = new THREE.CubeTextureLoader().setPath( 'images/' ).load( [
+						'px.jpg','nx.jpg',
+						'py.jpg','ny.jpg',
+						'pz.jpg','nz.jpg'
+					])
+
+				camera = new THREE.PerspectiveCamera(60, aspect, 1, 10000);
+				camera.position.set(0 , 0 , radius);
+				scene.add(camera);
+
+				controls = new THREE.OrbitControls(camera, container);
+				controls.maxDistance = radius * 1.3;
+				controls.rotateSpeed = 0.15;
+				controls.zoomSpeed = 1;
+				controls.panSpeed = 0.5;
+				controls.enableRotate = true;//左键
+				controls.enableZoom = true;//滚轮
+				controls.enablePan = false;//右键
+				controls.enableDamping = false;
+				controls.dampingFactor = 0.5;
+
+				controls.autoRotate = true;
+				controls.autoRotateSpeed = 1;
+
+				scene.add( new THREE.AmbientLight("#cccccc",0.3) );
+
+				var light = new THREE.DirectionalLight( 0xffffff, 0.8 );
+				light.position.set( 1, 1, 1 ).normalize();
+				scene.add( light );
+
+				var geometry = new THREE.BoxBufferGeometry( 20, 20, 20 );
+
+				for ( var i = 0; i < 2000; i ++ ) {
+
+					var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+
+					object.position.x = Math.random() * 800 - 400;
+					object.position.y = Math.random() * 800 - 400;
+					object.position.z = Math.random() * 800 - 400;
+
+					object.rotation.x = Math.random() * 2 * Math.PI;
+					object.rotation.y = Math.random() * 2 * Math.PI;
+					object.rotation.z = Math.random() * 2 * Math.PI;
+
+					object.scale.x = Math.random() + 0.5;
+					object.scale.y = Math.random() + 0.5;
+					object.scale.z = Math.random() + 0.5;
+
+					scene.add( object );
+
+				}
+
+				raycaster = new THREE.Raycaster();
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				var aspect = window.innerWidth / window.innerHeight;
+
+				camera.left = - frustumSize * aspect / 2;
+				camera.right = frustumSize * aspect / 2;
+				camera.top = frustumSize / 2;
+				camera.bottom = - frustumSize / 2;
+
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				event.preventDefault();
+
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+
+			}
+
+
+
+			function render() {
+
+				controls.update();
+
+				// find intersections
+
+				raycaster.setFromCamera( mouse, camera );
+
+				var intersects = raycaster.intersectObjects( scene.children );
+
+				if ( intersects.length > 0 ) {
+
+					if ( INTERSECTED != intersects[ 0 ].object ) {
+
+						if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+
+						INTERSECTED = intersects[ 0 ].object;
+						INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+						INTERSECTED.material.emissive.setHex( 0xff0000 );
+
+					}
+
+				} else {
+
+					if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+
+					INTERSECTED = null;
+
+				}
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+
+	</body>
+</html>
